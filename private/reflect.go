@@ -67,6 +67,9 @@ func (t *rtype) Kind() reflect.Kind { return reflect.Kind(t.kind & kindMask) }
 func SetAccessible(val reflect.Value) {
 	v := (*value)(unsafe.Pointer(&val))
 	i := int(v.Flag) >> flagMethodShift
+	if v.typ == nil {
+		return
+	}
 	var pkgPath **string
 	if v.typ.Kind() == reflect.Interface {
 		tt := (*interfaceType)(unsafe.Pointer(v.typ))
@@ -84,8 +87,6 @@ func SetAccessible(val reflect.Value) {
 	if pkgPath != nil {
 		memprotect(unsafe.Pointer(v.typ), true)
 		defer memprotect(unsafe.Pointer(v.typ), false)
-		// linux: sigsegv
-		// unix: sigbus
 		*pkgPath = nil
 	}
 }
