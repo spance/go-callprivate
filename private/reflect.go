@@ -85,8 +85,8 @@ func SetAccessible(val reflect.Value) {
 		}
 	}
 	if pkgPath != nil {
-		memprotect(unsafe.Pointer(v.typ), true)
-		defer memprotect(unsafe.Pointer(v.typ), false)
-		*pkgPath = nil
+		memprotect(unsafe.Pointer(v.typ), func() {
+			*pkgPath = nil
+		})
 	}
 }

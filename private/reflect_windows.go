@@ -34,20 +34,19 @@ type MEMORY_BASIC_INFORMATION struct {
 	Type              uint32
 }
 
-func memprotect(v unsafe.Pointer, writeable bool) error {
+func memprotect(v unsafe.Pointer, proc func()) (err error) {
 	var mbi MEMORY_BASIC_INFORMATION
 	virtualQuery.Call(uintptr(v), uintptr(unsafe.Pointer(&mbi)), unsafe.Sizeof(mbi))
-	var newProtect uintptr
-	var oldProtect uint32
-	var err error
-	if writeable {
-		newProtect = _PAGE_EXECUTE_READWRITE
-	} else {
-		newProtect = _PAGE_EXECUTE_READ
+	var oldProtect uintptr
+	var op = uintptr(unsafe.Pointer(&oldProtect))
+	_, _, err = virtualProtect.Call(mbi.BaseAddress, mbi.RegionSize, _PAGE_EXECUTE_READWRITE, op)
+	if en, y := err.(syscall.Errno); !y || en != 0 {
+		return
 	}
-	_, _, err = virtualProtect.Call(mbi.BaseAddress, mbi.RegionSize, newProtect, uintptr(unsafe.Pointer(&oldProtect)))
+	proc()
+	_, _, err = virtualProtect.Call(mbi.BaseAddress, mbi.RegionSize, uintptr(oldProtect), op)
 	if en, y := err.(syscall.Errno); y && en == 0 {
 		return nil
 	}
-	return err
+	return
 }
