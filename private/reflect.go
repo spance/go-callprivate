@@ -10,12 +10,12 @@ const (
 	flagMethodShift = 9
 )
 
-type Flag uintptr
+type flag_t uintptr
 
 type value struct {
 	typ *rtype
 	ptr unsafe.Pointer
-	Flag
+	flag_t
 }
 
 type rtype struct {
@@ -64,10 +64,10 @@ type interfaceType struct {
 
 func (t *rtype) Kind() reflect.Kind { return reflect.Kind(t.kind & kindMask) }
 
-func SetAccessible(val reflect.Value) {
+func SetAccessible(val reflect.Value) (err error) {
 	v := (*value)(unsafe.Pointer(&val))
-	i := int(v.Flag) >> flagMethodShift
-	if v.typ == nil {
+	i := int(v.flag_t) >> flagMethodShift
+	if v.flag_t&kindMask == 0 { // invalid reflect
 		return
 	}
 	var pkgPath **string
@@ -84,9 +84,10 @@ func SetAccessible(val reflect.Value) {
 			pkgPath = &m.pkgPath
 		}
 	}
-	if pkgPath != nil {
-		memprotect(unsafe.Pointer(v.typ), func() {
+	if pkgPath != nil && *pkgPath != nil {
+		err = memprotect(unsafe.Pointer(v.typ), unsafe.Pointer(*pkgPath), func() {
 			*pkgPath = nil
 		})
 	}
+	return
 }

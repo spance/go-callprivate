@@ -28,15 +28,21 @@ func init() {
 
 func sys_mprotect(addr uintptr, n uintptr, prot uintptr) int
 
-func memprotect(v unsafe.Pointer, proc func()) error {
-	var pageStart = uintptr(v) & pageMask
+func memprotect(_p1, _p2 unsafe.Pointer, proc func()) error {
+	var pageStart, plen uintptr
+	var p1, p2 = uintptr(_p1) & pageMask, uintptr(_p2) & pageMask
 	var no int
-	no = sys_mprotect(pageStart, pageSize, _PROT_READ_WRITE)
+	if p1 <= p2 {
+		pageStart, plen = p1, p2-p1+pageSize
+	} else {
+		pageStart, plen = p2, p1-p2+pageSize
+	}
+	no = sys_mprotect(pageStart, plen, _PROT_READ_WRITE)
 	if no != 0 {
 		return fmt.Errorf("mprotect errno=%d", no)
 	}
 	proc()
-	no = sys_mprotect(pageStart, pageSize, _PROT_READ)
+	no = sys_mprotect(pageStart, plen, _PROT_READ)
 	if no != 0 {
 		return fmt.Errorf("mprotect errno=%d", no)
 	}
